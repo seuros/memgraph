@@ -397,6 +397,13 @@ set_property(TARGET usearch PROPERTY INTERFACE_INCLUDE_DIRECTORIES
   ${CMAKE_CURRENT_SOURCE_DIR}/usearch/fp16/include
   ${CMAKE_CURRENT_SOURCE_DIR}/usearch/stringzilla/include)
 
+# setup mage (graph algorithms and analytics)
+set(MAGE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/mage/include
+  CACHE PATH "Path to mage include directory" FORCE)
+file(MAKE_DIRECTORY ${MAGE_INCLUDE_DIR})
+import_header_library(mage ${MAGE_INCLUDE_DIR})
+mark_as_advanced(MAGE_INCLUDE_DIR)
+
 macro(build_arrow)
   set(ARROW_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/arrow)
   set(ARROW_LIBDIR "${ARROW_ROOT}/lib")

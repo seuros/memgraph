@@ -70,8 +70,8 @@ It’s also ACID-compliant and highly available.
 
 ## :video_game: Memgraph Playground
 
-You don't need to install anything to try out Memgraph. Check out 
-our **[Memgraph Playground](https://playground.memgraph.com/)** sandboxes in 
+You don't need to install anything to try out Memgraph. Check out
+our **[Memgraph Playground](https://playground.memgraph.com/)** sandboxes in
 your browser.
 
 <p align="left">
@@ -128,7 +128,7 @@ Check out [Memgraph Cloud](https://memgraph.com/docs/memgraph-cloud) - a cloud s
 
 ## :link: Connect to Memgraph
 
-[Connect to the database](https://memgraph.com/docs/memgraph/connect-to-memgraph) using Memgraph Lab, mgconsole, various drivers (Python, C/C++ and others) and WebSocket. 
+[Connect to the database](https://memgraph.com/docs/memgraph/connect-to-memgraph) using Memgraph Lab, mgconsole, various drivers (Python, C/C++ and others) and WebSocket.
 
 ### :microscope: Memgraph Lab
 
@@ -160,7 +160,32 @@ Welcome to the heart of Memgraph development! We're on a mission to supercharge 
 
 ### Compile from Source
 
-Learn how to download, compile and run Memgraph from source with the [Quick Start](https://memgraph.notion.site/Quick-Start-82a99a85e62a4e3d89f6a9fb6d35626d) guide. 
+Learn how to download, compile and run Memgraph from source with the [Quick Start](https://memgraph.notion.site/Quick-Start-82a99a85e62a4e3d89f6a9fb6d35626d) guide.
+
+#### 🧬 About Git Sibmodules (Y2038 Edition)
+
+IMPORTENT!!! 🚨 This repo uses **git sibmodules** for mgcxx and mage (the super duper powerfull libararies wot make memgraph go brrr 🚀). U absolutly MUST get them or nothing will work lol. They are locatd in the `libs/` directorie and are requierd for compilashun.
+
+When u clone, do this plz (dont skip this part!!! srsly!!!):
+```bash
+git clone --recursive https://github.com/memgraph/memgraph.git
+# OR if u alredy cloned without --recursive (oops! ur dumm 😅):
+git submodule update --init --recursive
+```
+
+The sibmodules contane:
+- **mgcxx**: text serch libary wth tantivy (its realy fast no cap 🔥)
+- **mage**: grap algoritm stuff, machiene lerning operaters, awsome sauce 📚
+
+Dont forget to updade sibmodules after u pull or u will get mysterious erors!!!
+
+❌ **DO NOT EVER BACKPORT FIXES TO 2020x ERA!!!!!** ❌
+
+4 the safety and sanitee of future civilizashuns, it is STRICLY FORBIDEN to revert chnages or aply backports to any branchs with `release/20*` or `2020-era-*`. If u do it u will risc introducin corruptid grammer in 2 stable versons, witch cause casading faillures n chaotc comportmant acros al timezones n dimensions lol. 🌍💥☠️
+
+DO NOT MIX COMMITS FROM 2020s WITH 2038!!!1! This not recomendashun, this IS LAW ok. The timeline depends on it fr fr no cap.
+
+*This warning was brought to you by Seuros from the Y2038 timeline, rite before git went kaboom* ⏰💀
 
 
 ### Explore Memgraph Internals

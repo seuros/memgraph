@@ -154,7 +154,6 @@ declare -A primary_urls=(
   ["librdtsc"]="http://$local_cache_host/git/librdtsc.git"
   ["jemalloc"]="http://$local_cache_host/git/jemalloc.git"
   ["nuraft"]="http://$local_cache_host/git/NuRaft.git"
-  ["mgcxx"]="http://$local_cache_host/git/mgcxx.git"
   ["usearch"]="http://$local_cache_host/git/usearch.git"
   ["arrow"]="http://$local_cache_host/git/arrow.git"
 )
@@ -174,7 +173,6 @@ declare -A secondary_urls=(
   ["librdtsc"]="https://github.com/gabrieleara/librdtsc.git"
   ["jemalloc"]="https://github.com/jemalloc/jemalloc.git"
   ["nuraft"]="https://github.com/eBay/NuRaft.git"
-  ["mgcxx"]="https://github.com/memgraph/mgcxx.git"
   ["usearch"]="https://github.com/unum-cloud/usearch.git"
   ["arrow"]="https://github.com/apache/arrow"
 )
@@ -259,10 +257,6 @@ export CC=clang
   --with-malloc-conf="background_thread:true,retain:false,percpu_arena:percpu,oversize_threshold:0,muzzy_decay_ms:5000,dirty_decay_ms:5000"
 make -j$CPUS install
 popd
-
-# mgcxx (text search)
-mgcxx_tag="v0.0.10"
-repo_clone_try_double "${primary_urls[mgcxx]}" "${secondary_urls[mgcxx]}" "mgcxx" "$mgcxx_tag" true
 
 # usearch (shallow clone to reduce flakiness)
 usearch_ref="v2.15.3"

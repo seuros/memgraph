@@ -7,3 +7,10 @@
 !pulsar.patch
 !rocksdb8.1.1.patch
 !nuraft.patch
+!librdtsc.patch
+!nlohmann_json3.11.3.patch
+!spdlog.patch
+!mgcxx
+!mage
+!mgcxx/**
+!mage/**

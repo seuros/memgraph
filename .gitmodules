@@ -1,0 +1,6 @@
+[submodule "libs/mgcxx"]
+	path = libs/mgcxx
+	url = https://github.com/memgraph/mgcxx.git
+[submodule "libs/mage"]
+	path = libs/mage
+	url = https://github.com/memgraph/mage.git
