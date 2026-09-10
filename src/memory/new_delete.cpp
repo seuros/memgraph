@@ -18,7 +18,12 @@
 #if USE_JEMALLOC
 #include <jemalloc/jemalloc.h>
 #else
-#include <malloc.h>
+#include <cstdlib>
+#ifdef __FreeBSD__
+#include <malloc_np.h>  // malloc_usable_size on FreeBSD
+#else
+#include <malloc.h>  // malloc_usable_size on Linux
+#endif
 #endif
 
 #include "utils/memory_tracker.hpp"

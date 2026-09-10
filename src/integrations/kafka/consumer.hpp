@@ -19,6 +19,7 @@
 #include <expected>
 #include <functional>
 #include <memory>
+#include "utils/move_only_function.hpp"
 #include <optional>
 #include <span>
 #include <string>

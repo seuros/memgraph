@@ -12,6 +12,7 @@
 #pragma once
 
 #include <chrono>
+#include "utils/chrono_tz_compat.hpp"
 #include <cstdint>
 #include <ctime>
 #include <iosfwd>

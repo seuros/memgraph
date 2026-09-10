@@ -44,6 +44,7 @@ using nuraft::cluster_config;
 using nuraft::srv_config;
 using nuraft::srv_state;
 using nuraft::state_mgr;
+using nuraft::ulong;
 
 namespace {
 constexpr std::string_view kClusterConfigKey = "cluster_config";  // Key prefix for cluster_config durability

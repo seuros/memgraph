@@ -86,10 +86,13 @@ class UserProfiles {
     [[nodiscard]] bool operator()(const Profile &lhs, const Profile &rhs) const { return lhs.name == rhs.name; }
 
     [[nodiscard]] bool operator()(const char *lhs, const Profile &rhs) const { return lhs == rhs.name; }
+    [[nodiscard]] bool operator()(const Profile &lhs, const char *rhs) const { return lhs.name == rhs; }
 
     [[nodiscard]] bool operator()(std::string_view lhs, const Profile &rhs) const { return lhs == rhs.name; }
+    [[nodiscard]] bool operator()(const Profile &lhs, std::string_view rhs) const { return lhs.name == rhs; }
 
     [[nodiscard]] bool operator()(const std::string &lhs, const Profile &rhs) const { return lhs == rhs.name; }
+    [[nodiscard]] bool operator()(const Profile &lhs, const std::string &rhs) const { return lhs.name == rhs; }
   };
 
   mutable utils::RWSpinLock mtx_;

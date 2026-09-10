@@ -12,7 +12,12 @@
 #include "utils/thread.hpp"
 
 #include <spdlog/spdlog.h>
+#ifdef __FreeBSD__
+#include <pthread.h>
+#include <pthread_np.h>
+#else
 #include <sys/prctl.h>
+#endif
 
 #include "utils/logging.hpp"
 
@@ -22,9 +27,13 @@ void ThreadSetName(const std::string &name) {
   static constexpr auto max_name_length = GetMaxThreadNameSize();
   MG_ASSERT(name.size() <= max_name_length, "Thread name '{}' is too long", max_name_length);
 
+#ifdef __FreeBSD__
+  pthread_set_name_np(pthread_self(), name.c_str());
+#else
   if (prctl(PR_SET_NAME, name.c_str()) != 0) {
     spdlog::warn("Couldn't set thread name: {}!", name);
   }
+#endif
 }
 
 }  // namespace memgraph::utils

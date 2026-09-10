@@ -18,6 +18,12 @@
 #include <system_error>
 
 #include <unistd.h>
+#if defined(__FreeBSD__)
+#include <sys/resource.h>
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/user.h>
+#endif
 
 #include "utils/file.hpp"
 #include "utils/logging.hpp"
@@ -152,6 +158,15 @@ inline uint64_t GetDirDiskUsage(const std::filesystem::path &path) {
 
 /// Returns the number of bytes the process is using in the memory.
 inline uint64_t GetMemoryRES() {
+#if defined(__FreeBSD__)
+  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()};
+  struct kinfo_proc kp;
+  size_t len = sizeof(kp);
+  if (sysctl(mib, 4, &kp, &len, nullptr, 0) == 0) {
+    return kp.ki_rssize * static_cast<uint64_t>(sysconf(_SC_PAGESIZE));
+  }
+  return 0;
+#else
   // Get PID of entire process.
   pid_t pid = getpid();
   uint64_t memory = 0;
@@ -163,6 +178,7 @@ inline uint64_t GetMemoryRES() {
     }
   }
   return memory;
+#endif
 }
 
 /// Returns the size of vm.max_map_count

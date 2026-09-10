@@ -86,10 +86,15 @@
 #include "vertex_accessor.hpp"
 
 import memgraph.csv.parsing;
-import memgraph.query.arrow_parquet.reader;
-import memgraph.query.jsonl.reader;
 import memgraph.utils.aws;
 import memgraph.utils.fnv;
+#ifdef __FreeBSD__
+#include "query/arrow_parquet/reader.hpp"
+#include "query/jsonl/reader.hpp"
+#else
+import memgraph.query.arrow_parquet.reader;
+import memgraph.query.jsonl.reader;
+#endif
 
 namespace r = ranges;
 namespace rv = r::views;
@@ -1058,7 +1063,7 @@ class ScanAllCursor : public Cursor {
   const UniqueCursorPtr input_cursor_;
   storage::View view_;
   TVerticesFun get_vertices_;
-  std::optional<typename std::result_of<TVerticesFun(Frame &, ExecutionContext &)>::type::value_type> vertices_;
+  std::optional<typename std::invoke_result_t<TVerticesFun, Frame &, ExecutionContext &>::value_type> vertices_;
   std::optional<decltype(vertices_->begin())> vertices_it_;
   std::optional<decltype(vertices_->end())> vertices_end_it_;
   const char *op_name_;
@@ -1142,7 +1147,7 @@ class ScanAllByEdgeCursor : public Cursor {
   storage::View view_;
   TEdgesFun get_edges_;
 
-  std::optional<typename std::result_of<TEdgesFun(Frame &, ExecutionContext &)>::type::value_type> edges_;
+  std::optional<typename std::invoke_result_t<TEdgesFun, Frame &, ExecutionContext &>::value_type> edges_;
   std::optional<decltype(edges_->begin())> edges_it_;
   std::optional<decltype(edges_->end())> edges_end_it_;
   const char *op_name_;

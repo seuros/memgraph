@@ -42,6 +42,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <sys/wait.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

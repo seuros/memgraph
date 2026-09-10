@@ -252,7 +252,7 @@ void TTL::Configure(bool should_run_edge_ttl) {
           // This is the most efficient approach as it uses the index to filter by property value
           std::vector<PropertyPath> ttl_property_path = {ttl_property};
           std::vector<PropertyValueRange> ttl_property_ranges = {
-              PropertyValueRange::Bounded(std::nullopt, utils::MakeBoundExclusive(PropertyValue(now_us.count())))};
+              PropertyValueRange::Bounded(std::nullopt, utils::MakeBoundExclusive(PropertyValue(static_cast<int64_t>(now_us.count()))))};
           auto vertices = batch_accessor->Vertices(ttl_label, ttl_property_path, ttl_property_ranges, View::NEW);
           std::vector<VertexAccessor> vertices_to_delete;
           vertices_to_delete.reserve(batch_size);
@@ -282,7 +282,7 @@ void TTL::Configure(bool should_run_edge_ttl) {
           // Use edge property index with range to efficiently find edges where ttl < now
           // This is much more efficient than using property index + checking each edge for the value
           auto edges = batch_accessor->Edges(
-              ttl_property, std::nullopt, utils::MakeBoundExclusive(PropertyValue(now_us.count())), View::NEW);
+              ttl_property, std::nullopt, utils::MakeBoundExclusive(PropertyValue(static_cast<int64_t>(now_us.count()))), View::NEW);
           std::vector<EdgeAccessor> edges_to_delete;
           edges_to_delete.reserve(batch_size);
 

@@ -22,6 +22,10 @@
 #include <thread>
 #include <vector>
 
+#ifdef __FreeBSD__
+#include <sys/sysctl.h>
+#endif
+
 #include "utils/file.hpp"
 #include "utils/string.hpp"
 #include "utils/sysinfo/memory.hpp"
@@ -34,12 +38,24 @@ std::string GetMachineId() {
       override_id != nullptr && override_id[0] != '\0') {
     return override_id;
   }
-  // We assume we're on linux and we need to read the machine id from /etc/machine-id
+#ifdef __FreeBSD__
+  // FreeBSD: read kern.hostuuid via sysctl
+  char uuid[64] = {};
+  size_t len = sizeof(uuid);
+  if (sysctlbyname("kern.hostuuid", uuid, &len, nullptr, 0) == 0 && len > 1) {
+    // Remove trailing newline if present
+    std::string id(uuid);
+    if (!id.empty() && id.back() == '\n') id.pop_back();
+    return id;
+  }
+  return "UNKNOWN";
+#else
   const auto machine_id_lines = memgraph::utils::ReadLines("/etc/machine-id");
   if (machine_id_lines.size() != 1) {
     return "UNKNOWN";
   }
   return machine_id_lines[0];
+#endif
 }
 
 MemoryInfo GetMemoryInfo() {
@@ -133,9 +149,27 @@ std::string ExtractArmCPUVariant(const std::vector<std::string> &cpu_data) {
 }
 
 CPUInfo GetCPUInfo(const std::string &machine) {
-  // Parse `/proc/cpuinfo`.
   std::string cpu_model;
   uint64_t cpu_count{0};
+  uint8_t microarch_level = 0;
+
+#ifdef __FreeBSD__
+  // FreeBSD: use sysctl for CPU info
+  char model[256] = {};
+  size_t len = sizeof(model);
+  if (sysctlbyname("hw.model", model, &len, nullptr, 0) == 0) {
+    cpu_model = model;
+  }
+  int ncpu = 0;
+  len = sizeof(ncpu);
+  if (sysctlbyname("hw.ncpu", &ncpu, &len, nullptr, 0) == 0) {
+    cpu_count = static_cast<uint64_t>(ncpu);
+  }
+  // CPU flag detection via /proc/cpuinfo is not available on FreeBSD;
+  // microarch_level detection can be added later via CPUID intrinsics.
+  (void)machine;
+#else
+  // Linux: parse `/proc/cpuinfo`.
   auto cpu_data = utils::ReadLines("/proc/cpuinfo");
   for (auto &row : cpu_data) {
     auto tmp = utils::Trim(row);
@@ -147,7 +181,6 @@ CPUInfo GetCPUInfo(const std::string &machine) {
       cpu_model = utils::Trim(split[1]);
     }
   }
-  uint8_t microarch_level = 0;
   if (machine == "x86_64") {
     auto flags = ExtractCPUFlags(cpu_data);
     microarch_level = DetectX86LevelFromFlags(flags);
@@ -155,11 +188,11 @@ CPUInfo GetCPUInfo(const std::string &machine) {
 
   if (machine == "aarch64") {
     microarch_level = DetectArmArchitectureLevel(cpu_data);
-    // cpu_model is often empty on arm64 - try to extract cpu variant and implementer
     if (cpu_model.empty()) {
       cpu_model = ExtractArmCPUVariant(cpu_data);
     }
   }
+#endif
 
   return {cpu_model, cpu_count, microarch_level};
 }

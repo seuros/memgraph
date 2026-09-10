@@ -15,6 +15,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <functional>
+#include "utils/move_only_function.hpp"
 #include <mutex>
 #include <queue>
 #include <stop_token>

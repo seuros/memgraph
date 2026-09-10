@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include "utils/move_only_function.hpp"
 #include <mutex>
 #include <queue>
 #include <thread>

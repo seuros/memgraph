@@ -37,6 +37,7 @@ using nuraft::int64;
 using nuraft::log_entry;
 using nuraft::log_store;
 using nuraft::raft_server;
+using nuraft::ulong;
 
 class CoordinatorLogStore final : public log_store {
  public:

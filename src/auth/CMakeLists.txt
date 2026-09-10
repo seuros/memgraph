@@ -8,14 +8,18 @@ target_sources(mg-auth PRIVATE
     profiles/user_profiles.cpp
 )
 
-find_package(libseccomp REQUIRED)
 find_package(fmt REQUIRED)
 find_package(gflags REQUIRED)
+
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+    find_package(libseccomp REQUIRED)
+    target_compile_definitions(mg-auth PRIVATE MG_HAS_SECCOMP)
+endif()
 
 target_link_libraries(mg-auth
     PUBLIC mg-kvstore mg-license
     PRIVATE nlohmann_json::nlohmann_json libbcrypt::libbcrypt gflags fmt::fmt
-    mg-utils mg::system mg-slk libseccomp::libseccomp openssl::openssl)
+    mg-utils mg::system mg-slk $<$<NOT:$<STREQUAL:${CMAKE_SYSTEM_NAME},FreeBSD>>:libseccomp::libseccomp> openssl::openssl)
 
 # Install reference auth modules and their configuration files.
 install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/reference_modules/common.py

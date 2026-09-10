@@ -13,6 +13,7 @@
 
 #include <functional>
 #include <memory>
+#include "utils/move_only_function.hpp"
 
 namespace memgraph::query::procedure {
 class CypherType;

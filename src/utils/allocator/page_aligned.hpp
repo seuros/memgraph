@@ -25,7 +25,7 @@ namespace memgraph::utils {
 // this allocator.
 template <typename T>
 struct PageAlignedAllocator {
-  static constexpr std::size_t PAGE_SIZE = 4096;
+  static constexpr std::size_t kPageSize = 4096;
   using value_type = T;
 
   PageAlignedAllocator() = default;
@@ -34,19 +34,19 @@ struct PageAlignedAllocator {
   explicit PageAlignedAllocator(const PageAlignedAllocator<U> & /*other*/) noexcept {}
 
   auto allocate(std::size_t n) -> T * {
-    auto size = std::max(n * sizeof(T), PAGE_SIZE);
-    // Round up to the nearest multiple of PAGE_SIZE
-    size = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
-    return static_cast<T *>(memory::DbAllocateBytes(size, memory::tls_db_arena_state.arena, PAGE_SIZE));
+    auto size = std::max(n * sizeof(T), kPageSize);
+    // Round up to the nearest multiple of kPageSize
+    size = ((size + kPageSize - 1) / kPageSize) * kPageSize;
+    return static_cast<T *>(memory::DbAllocateBytes(size, memory::tls_db_arena_state.arena, kPageSize));
   }
 
   void deallocate(T *p, std::size_t n) const noexcept {
     // NOTE: jemalloc tracks the owning arena per-extent in its own metadata, so GC can safely
     // free query-thread allocations regardless of which thread calls deallocate.
     // Recalculate the actual allocated size (mirroring allocate) for sized deallocation.
-    auto size = std::max(n * sizeof(T), PAGE_SIZE);
-    size = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
-    memory::DbDeallocateBytes(static_cast<void *>(p), size, PAGE_SIZE);
+    auto size = std::max(n * sizeof(T), kPageSize);
+    size = ((size + kPageSize - 1) / kPageSize) * kPageSize;
+    memory::DbDeallocateBytes(static_cast<void *>(p), size, kPageSize);
   }
 
   friend bool operator==(PageAlignedAllocator const &, PageAlignedAllocator const &) noexcept { return true; }

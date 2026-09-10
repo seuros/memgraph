@@ -11,12 +11,17 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <sched.h>
+#ifdef MG_HAS_SECCOMP
 #include <seccomp.h>
+#endif
 #include <spdlog/spdlog.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#ifdef __FreeBSD__
+extern char **environ;
+#endif
 #include <array>
 #include <cerrno>
 #include <chrono>
@@ -88,6 +93,7 @@ class CharPP final {
 // Security functions and constants.
 ////////////////////////////////////
 
+#ifdef MG_HAS_SECCOMP
 const std::vector<int> kSeccompSyscallsBlacklist = {
     SCMP_SYS(mknod),         SCMP_SYS(mount),        SCMP_SYS(setuid),
     SCMP_SYS(stime),         SCMP_SYS(ptrace),       SCMP_SYS(setgid),
@@ -110,8 +116,10 @@ const std::vector<int> kSeccompSyscallsBlacklist = {
     SCMP_SYS(seccomp),
 #endif
 };
+#endif  // MG_HAS_SECCOMP
 
 bool SetupSeccomp() {
+#ifdef MG_HAS_SECCOMP
   // Initialize the seccomp context.
   scmp_filter_ctx ctx;
   ctx = seccomp_init(SCMP_ACT_ALLOW);
@@ -131,6 +139,9 @@ bool SetupSeccomp() {
   // Free the context and return success/failure.
   seccomp_release(ctx);
   return ret == 0;
+#else
+  return true;  // No kernel sandboxing available on this platform
+#endif
 }
 
 bool SetLimit(int resource, rlim_t n) {
@@ -350,7 +361,17 @@ bool Module::Startup() {
   target_arguments_->pipe_from_module = pipe_from_module_[kPipeWriteEnd];
 
   // Create the process.
+#ifdef __FreeBSD__
+  // FreeBSD doesn't have clone(); use vfork() which has the same
+  // share-memory-until-exec semantics as CLONE_VFORK.
+  pid_ = vfork();
+  if (pid_ == 0) {
+    // Child process - run Target and _exit on failure.
+    _exit(Target(target_arguments_.get()));
+  }
+#else
   pid_ = clone(Target, stack_top, CLONE_VFORK, target_arguments_.get());
+#endif
   if (pid_ == -1) {
     spdlog::error("Couldn't start the auth module process!");
     close(pipe_to_module_[kPipeReadEnd]);

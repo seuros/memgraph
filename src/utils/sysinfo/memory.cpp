@@ -11,16 +11,56 @@
 
 #include "utils/sysinfo/memory.hpp"
 
-#include <sys/sysinfo.h>
-
-#include <fmt/format.h>
 #include <spdlog/spdlog.h>
+
+#ifdef __FreeBSD__
+#include <sys/sysctl.h>
+#include <sys/vmmeter.h>
+#include <vm/vm_param.h>
+#else
+#include <sys/sysinfo.h>
+#include <fmt/format.h>
 #include <fstream>
 #include <limits>
 #include <string>
 #include <string_view>
+#endif
 
 namespace memgraph::utils::sysinfo {
+
+#ifdef __FreeBSD__
+
+namespace {
+std::optional<uint64_t> SysctlByName(const char *name) {
+  uint64_t value = 0;
+  size_t len = sizeof(value);
+  if (sysctlbyname(name, &value, &len, nullptr, 0) != 0) {
+    SPDLOG_WARN("Failed to read sysctl {}", name);
+    return std::nullopt;
+  }
+  return value;
+}
+}  // namespace
+
+std::optional<uint64_t> AvailableMemory() {
+  // Free + inactive + cache pages, converted to KiB
+  auto page_size = SysctlByName("hw.pagesize");
+  auto free_count = SysctlByName("vm.stats.vm.v_free_count");
+  auto inactive_count = SysctlByName("vm.stats.vm.v_inactive_count");
+  auto cache_count = SysctlByName("vm.stats.vm.v_cache_count");
+  if (!page_size || !free_count || !inactive_count) return std::nullopt;
+  uint64_t pages = *free_count + *inactive_count + cache_count.value_or(0);
+  return (pages * *page_size) / 1024;
+}
+
+std::optional<MemoryCapacity> InstalledMemory() {
+  auto ram = SysctlByName("hw.physmem");
+  auto swap = SysctlByName("vm.swap_total");
+  if (!ram) return std::nullopt;
+  return MemoryCapacity{.ram_kib = *ram / 1024, .swap_kib = swap.value_or(0) / 1024};
+}
+
+#else  // Linux
 
 namespace {
 std::optional<uint64_t> ExtractAmountFromMemInfo(const std::string_view header_name) {
@@ -56,5 +96,7 @@ std::optional<MemoryCapacity> InstalledMemory() {
   const uint64_t mem_unit = info.mem_unit;
   return MemoryCapacity{.ram_kib = info.totalram * mem_unit / 1024, .swap_kib = info.totalswap * mem_unit / 1024};
 }
+
+#endif
 
 }  // namespace memgraph::utils::sysinfo

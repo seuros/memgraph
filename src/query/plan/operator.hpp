@@ -13,6 +13,7 @@
 
 #include <functional>
 #include <memory>
+#include "utils/move_only_function.hpp"
 #include <optional>
 #include <unordered_map>
 #include <utility>

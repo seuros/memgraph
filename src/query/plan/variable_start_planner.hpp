@@ -410,8 +410,8 @@ class VariableStartPlanner {
 
   /// @brief The result of plan generation is an iterable of roots to multiple
   /// generated operator trees.
-  using PlanResult = std::result_of_t<decltype (&VariableStartPlanner<TPlanningContext>::Plan)(
-      VariableStartPlanner<TPlanningContext>, QueryParts &)>;
+  using PlanResult = std::invoke_result_t<decltype (&VariableStartPlanner<TPlanningContext>::Plan),
+      VariableStartPlanner<TPlanningContext> &, QueryParts &>;
 };
 
 }  // namespace memgraph::query::plan

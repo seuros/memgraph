@@ -71,7 +71,7 @@ Telemetry::Telemetry(std::string url, std::filesystem::path storage_directory, s
 
   scheduler_.Pause();  // Don't run until all collects have been added
   scheduler_.SetInterval(
-      std::min(kFirstShotAfter, refresh_interval));  // use user-defined interval if shorter than first shot
+      std::min<std::chrono::duration<int64_t>>(kFirstShotAfter, refresh_interval));  // use user-defined interval if shorter than first shot
   scheduler_.Run(
       "Telemetry",
       [this, final_interval = refresh_interval, update_interval = kFirstShotAfter < refresh_interval]() mutable {

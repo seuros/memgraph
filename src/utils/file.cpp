@@ -12,8 +12,12 @@
 #include "utils/file.hpp"
 
 #include <fcntl.h>
-#include <sys/sendfile.h>
 #include <unistd.h>
+#ifdef __FreeBSD__
+#include <sys/sysctl.h>
+#else
+#include <sys/sendfile.h>
+#endif
 
 #include <algorithm>
 #include <cerrno>
@@ -34,7 +38,55 @@
 
 namespace memgraph::utils {
 
-std::filesystem::path GetExecutablePath() { return std::filesystem::read_symlink("/proc/self/exe"); }
+auto CreateUniqueDownloadFile(std::filesystem::path const &base_path)
+    -> std::pair<std::filesystem::path, FileUniquePtr> {
+  // w for writing
+  // b for binary
+  // x for exclusive access
+  constexpr auto file_mode = "wbx";
+
+  // Try without suffix
+  FileUniquePtr file(std::fopen(base_path.string().data(), file_mode), &std::fclose);
+
+  if (file) {
+    return std::make_pair(base_path, std::move(file));
+  }
+
+  auto const stem = base_path.stem();
+  auto const ext = base_path.extension();
+  auto const parent = base_path.parent_path();
+
+  auto suffix = 1;
+  // We don't want more than 10k files with the same name
+  constexpr auto max_suffix = 10'000;
+
+  std::filesystem::path new_path;
+
+  do {
+    new_path = parent / std::format("{}_{}{}", stem.string(), suffix, ext.string());
+    FileUniquePtr file(std::fopen(new_path.string().data(), file_mode), &std::fclose);
+    if (file) {
+      return std::make_pair(new_path, std::move(file));
+    }
+  } while (suffix++ < max_suffix);
+
+  throw utils::BasicException("More than 10k files with the same name. File {} won't be downloaded.",
+                              base_path.string());
+}
+
+std::filesystem::path GetExecutablePath() {
+#ifdef __FreeBSD__
+  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
+  char path[PATH_MAX] = {};
+  size_t len = sizeof(path);
+  if (sysctl(mib, 4, path, &len, nullptr, 0) == 0) {
+    return path;
+  }
+  return {};
+#else
+  return std::filesystem::read_symlink("/proc/self/exe");
+#endif
+}
 
 std::vector<std::string> ReadLines(const std::filesystem::path &path) noexcept {
   std::vector<std::string> lines;
@@ -521,7 +573,11 @@ bool OutputFile::AcquireLock() {
   MG_ASSERT(IsOpen(), "Trying to acquire a write lock on an unopened file!");
   int ret = -1;
   while (true) {
-    struct flock lock = {.l_type = F_WRLCK, .l_whence = SEEK_SET, .l_start = 0, .l_len = 0};
+    struct flock lock = {};
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;
     ret = fcntl(fd_, F_SETLK, &lock);
     if (ret == -1 && errno == EINTR) {
       // The call was interrupted, try again...
@@ -966,18 +1022,34 @@ std::optional<uint64_t> NonConcurrentOutputFile::AppendFrom(int src_fd, uint64_t
   uint64_t copied = 0;
   off_t src_offset = 0;
   while (copied < size) {
-    // Copied a buffer at a time rather than in one call, so that pacing sees the same granularity
-    // of output here as it does from the buffered path. Handed a whole file at once it would treat
-    // that file as a single window and bound nothing.
     auto const chunk = std::min<uint64_t>(size - copied, kFileBufferSize);
+#ifdef __FreeBSD__
+    // FreeBSD sendfile() is socket-oriented; use pread/write for file-to-file copy.
+    char buf[kFileBufferSize];
+    auto const nread = ::pread(src_fd, buf, chunk, src_offset);
+    if (nread == -1) {
+      if (errno == EINTR) continue;
+      return std::nullopt;
+    }
+    if (nread == 0) break;
+    auto const nwritten = ::write(fd_, buf, nread);
+    if (nwritten == -1) {
+      if (errno == EINTR) continue;
+      return std::nullopt;
+    }
+    src_offset += nwritten;
+    copied += static_cast<uint64_t>(nwritten);
+    PaceWriteback(static_cast<size_t>(nwritten));
+#else
     auto const sent = ::sendfile(fd_, src_fd, &src_offset, chunk);
     if (sent == -1) {
       if (errno == EINTR) continue;
       return std::nullopt;
     }
-    if (sent == 0) break;  // the source ended early
+    if (sent == 0) break;
     copied += static_cast<uint64_t>(sent);
     PaceWriteback(static_cast<size_t>(sent));
+#endif
   }
   return copied;
 }
@@ -989,16 +1061,10 @@ void NonConcurrentOutputFile::PaceWriteback(size_t bytes) {
   auto const pending_len = pacing_offset_ - pacing_pending_start_;
   if (pending_len < pacing_window_) return;
 
-  // What a failed `sync_file_range` means. EIO and ENOSPC are the same class of failure that makes
-  // a failed `fsync` fatal in this file, and they must not be swallowed: Linux reports a given
-  // writeback error to an open file once, so a pacing call that consumes one and drops it leaves
-  // the later `fsync` in `Sync` free to report success for data that never reached the disk. Every
-  // other failure says pacing does not apply to this descriptor rather than that anything is wrong
-  // with the data; the file is written exactly as it was before pacing, so pacing turns itself off
-  // and the file carries on. A descriptor pacing cannot work on will not become one.
-  //
-  // Returns whether pacing is still on. Retrying the whole range after EINTR is what `Sync` does
-  // with `fsync`, and is safe because handing the same range over again asks for the same work.
+#ifdef __FreeBSD__
+  // FreeBSD lacks sync_file_range; fall back to fdatasync for writeback pacing.
+  ::fdatasync(fd_);
+#else
   auto const sync_range = [this](uint64_t start, uint64_t len, unsigned int flags) {
     while (::sync_file_range(fd_, static_cast<off64_t>(start), static_cast<off64_t>(len), flags) != 0) {
       auto const err = errno;
@@ -1009,8 +1075,6 @@ void NonConcurrentOutputFile::PaceWriteback(size_t bytes) {
                 path_,
                 strerror(err),
                 err);
-      // A closed descriptor is this class losing track of its own file, which no filesystem can
-      // cause and disabling pacing would hide.
       DMG_ASSERT(err != EBADF, "Writeback pacing for {} was given a closed descriptor.", path_);
       spdlog::warn(
           "Disabling writeback pacing for {}: sync_file_range failed with {} ({}).", path_, strerror(err), err);
@@ -1020,14 +1084,6 @@ void NonConcurrentOutputFile::PaceWriteback(size_t bytes) {
     return true;
   };
 
-  // Two windows are in flight: the one just completed is handed to writeback, and the one handed
-  // over previously is waited for and then disposed of. Dropping has to come after the pages are
-  // clean, because POSIX_FADV_DONTNEED silently does nothing to a dirty page; that is what the
-  // WAIT_BEFORE on the older window buys.
-  //
-  // The WRITE-only call is asynchronous in intent, but the kernel may still block it once the range
-  // exceeds the device's request queue. That is the trade pacing exists to make: this writer waits
-  // instead of every writer on the machine waiting at `dirty_ratio`.
   if (!sync_range(pacing_pending_start_, pending_len, SYNC_FILE_RANGE_WRITE)) return;
 
   if (pacing_prev_len_ != 0) {
@@ -1037,6 +1093,7 @@ void NonConcurrentOutputFile::PaceWriteback(size_t bytes) {
           fd_, static_cast<off_t>(pacing_prev_start_), static_cast<off_t>(pacing_prev_len_), POSIX_FADV_DONTNEED);
     }
   }
+#endif
 
   pacing_prev_start_ = pacing_pending_start_;
   pacing_prev_len_ = pending_len;

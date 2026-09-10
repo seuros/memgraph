@@ -15,6 +15,7 @@
 #include <chrono>
 #include <functional>
 #include <mutex>
+#include "utils/move_only_function.hpp"
 #include <optional>
 #include <utility>
 

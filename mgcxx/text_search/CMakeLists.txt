@@ -65,13 +65,21 @@ set(TEXT_SEARCH_HPP_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/text_search.hpp")
 # host-glibc symbols (e.g. __libc_single_threaded@GLIBC_2.32) in
 # libtantivy_text_search.a. CC/CXX point at toolchain clang and CFLAGS/
 # CXXFLAGS carry only sysroot-relevant flags — no -ftime-trace.
-set(MGCXX_TEXT_SEARCH_CC_FLAGS "--sysroot=${MG_TOOLCHAIN_SYSROOT} --gcc-toolchain=${MG_TOOLCHAIN_ROOT}")
+if (MG_TOOLCHAIN_ROOT AND IS_DIRECTORY "${MG_TOOLCHAIN_ROOT}")
+  set(MGCXX_TEXT_SEARCH_CC  "${MG_TOOLCHAIN_ROOT}/bin/clang")
+  set(MGCXX_TEXT_SEARCH_CXX "${MG_TOOLCHAIN_ROOT}/bin/clang++")
+  set(MGCXX_TEXT_SEARCH_CC_FLAGS "--sysroot=${MG_TOOLCHAIN_SYSROOT} --gcc-toolchain=${MG_TOOLCHAIN_ROOT}")
+else()
+  set(MGCXX_TEXT_SEARCH_CC  "${CMAKE_C_COMPILER}")
+  set(MGCXX_TEXT_SEARCH_CXX "${CMAKE_CXX_COMPILER}")
+  set(MGCXX_TEXT_SEARCH_CC_FLAGS "")
+endif()
 
 add_custom_command(
   OUTPUT ${MGCXX_TEXT_SEARCH_RUST_CPP} ${MGCXX_TEXT_SEARCH_RUST_LIB} ${TEXT_SEARCH_HPP_OUTPUT}
   COMMAND ${CMAKE_COMMAND} -E env
-          CC=${MG_TOOLCHAIN_ROOT}/bin/clang
-          CXX=${MG_TOOLCHAIN_ROOT}/bin/clang++
+          CC=${MGCXX_TEXT_SEARCH_CC}
+          CXX=${MGCXX_TEXT_SEARCH_CXX}
           CFLAGS=${MGCXX_TEXT_SEARCH_CC_FLAGS}
           CXXFLAGS=${MGCXX_TEXT_SEARCH_CC_FLAGS}
           CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR}

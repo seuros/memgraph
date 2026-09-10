@@ -15,6 +15,8 @@
 #include <ranges>
 #include <span>
 #include <stdexcept>
+
+#include "utils/enumerate.hpp"
 #include <variant>
 #include <vector>
 

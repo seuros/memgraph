@@ -38,7 +38,7 @@ add_library(mg-query STATIC)
 target_sources(mg-query
     PRIVATE
     auth_query_handler.cpp
-    arrow_parquet/reader.cpp
+    $<$<NOT:$<STREQUAL:${CMAKE_SYSTEM_NAME},FreeBSD>>:arrow_parquet/reader.cpp>
     common.cpp
     context.cpp
     cypher_query_interpreter.cpp
@@ -62,7 +62,7 @@ target_sources(mg-query
     interpret/frame.cpp
     interpreter_context.cpp
     interpreter.cpp
-    jsonl/reader.cpp
+    $<$<STREQUAL:${CMAKE_SYSTEM_NAME},FreeBSD>:jsonl/reader.cpp>
     metadata.cpp
     parse_config_map.cpp
     plan/hint_provider.cpp
@@ -160,12 +160,29 @@ target_sources(mg-query
 # cycle errors (see src/utils/CMakeLists.txt for details).
 add_library(mg-query-cppm STATIC)
 add_library(mg::query-cppm ALIAS mg-query-cppm)
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 target_sources(mg-query-cppm
     PUBLIC
     FILE_SET CXX_MODULES FILES
     arrow_parquet/reader.cppm
     jsonl/reader.cppm
 )
+else()
+# FreeBSD: clang 21 crashes on C++20 module emission when typed_value.hpp
+# headers overlap with imported module template specializations
+# (setFunctionTemplateSpecialization assert). The reader .cpp files are compiled
+# as regular TUs (via #ifdef __FreeBSD__ guards) and added to mg-query instead.
+target_sources(mg-query-cppm PRIVATE
+    arrow_parquet/reader.cpp
+)
+target_link_libraries(mg-query-cppm PRIVATE
+    ctre::ctre
+    simdjson::simdjson
+    arrow::arrow
+    mg-flags
+    mg-utils
+)
+endif()
 target_link_libraries(mg-query-cppm PUBLIC mg-aws mg::storage)
 
 # Everything Python lives behind MG_PYTHON_SUPPORT: with it OFF, mg-query
@@ -269,7 +286,7 @@ endif() # MG_PYTHON_SUPPORT
 
 target_link_libraries(mg-query
     PUBLIC
-    dl
+    $<$<NOT:$<PLATFORM_ID:FreeBSD>>:dl>
     cppitertools::cppitertools
     range-v3::range-v3
     ${MG_PYTHON_LINK_TARGET}

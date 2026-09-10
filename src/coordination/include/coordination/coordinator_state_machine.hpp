@@ -51,6 +51,7 @@ using nuraft::logger;
 using nuraft::ptr;
 using nuraft::snapshot;
 using nuraft::state_machine;
+using nuraft::ulong;
 
 struct SnapshotCtx {
   SnapshotCtx(ptr<snapshot> const &snapshot, CoordinatorClusterState const &cluster_state)

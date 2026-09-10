@@ -15,6 +15,7 @@
 #include <bitset>
 #include <ranges>
 #include <tuple>
+#include "utils/enumerate.hpp"
 #include "memory/db_arena_fwd.hpp"
 #include "metrics/prometheus_metrics.hpp"
 #include "storage/v2/constraints/constraint_violation.hpp"

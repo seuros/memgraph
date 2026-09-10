@@ -1727,7 +1727,11 @@ struct ExtendedPropertyType {
 };
 
 static_assert(sizeof(PropertyValue) == 40);
+#if defined(_LIBCPP_VERSION)
+static_assert(sizeof(pmr::PropertyValue) == 48);
+#else
 static_assert(sizeof(pmr::PropertyValue) == 56);
+#endif
 
 /**
  * Helper to read a nested value from within a PropertyValue map. If the path

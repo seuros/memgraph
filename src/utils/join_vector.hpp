@@ -10,7 +10,6 @@
 // licenses/APL.txt.
 
 #pragma once
-#include <ranges>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -20,9 +19,9 @@ namespace memgraph::utils {
 template <typename T>
 std::string JoinVector(const std::vector<T> &vec, const std::string &separator) {
   std::ostringstream oss;
-  for (auto const &[i, v] : vec | std::views::enumerate) {
+  for (size_t i = 0; i < vec.size(); ++i) {
     if (i > 0) oss << separator;
-    oss << v;
+    oss << vec[i];
   }
   return oss.str();
 }

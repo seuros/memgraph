@@ -23,7 +23,7 @@
 
 #if USE_JEMALLOC
 #include "jemalloc/jemalloc.h"
-#else
+#elif !defined(__FreeBSD__)
 #include <malloc.h>
 #endif
 
@@ -148,9 +148,10 @@ void UnsetHooks() {
 void PurgeUnusedMemory() {
 #if USE_JEMALLOC
   je_mallctl("arena." STRINGIFY(MALLCTL_ARENAS_ALL) ".purge", nullptr, nullptr, nullptr, 0);
-#else
+#elif !defined(__FreeBSD__)
   malloc_trim(0);
 #endif
+  // FreeBSD's allocator purges internally; no explicit trim needed.
 }
 
 void EnsureJemallocThreadStateInitialized() {

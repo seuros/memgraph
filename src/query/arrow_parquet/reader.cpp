@@ -9,7 +9,9 @@
 // by the Apache License, Version 2.0, included in the file
 // licenses/APL.txt.
 
+#ifndef __FreeBSD__
 module;
+#endif
 
 #include "flags/run_time_configurable.hpp"
 #include "query/exceptions.hpp"
@@ -39,7 +41,12 @@ module;
 #include "parquet/properties.h"
 #include "spdlog/spdlog.h"
 
+#ifdef __FreeBSD__
+import memgraph.utils.aws;
+#include "query/arrow_parquet/reader.hpp"
+#else
 module memgraph.query.arrow_parquet.reader;
+#endif
 
 constexpr int64_t batch_rows = 1U << 16U;
 

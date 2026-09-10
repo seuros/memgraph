@@ -177,6 +177,12 @@ bool Socket::Connect(const Endpoint &endpoint, std::chrono::milliseconds const c
       // Success
       socket_ = sfd;
       endpoint_ = endpoint;
+#ifdef __FreeBSD__
+      {
+        int on = 1;
+        setsockopt(socket_, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
+      }
+#endif
 
       break;
     }
@@ -292,16 +298,16 @@ void Socket::SetKeepAlive() {
   };
 
   set_opt(SOL_SOCKET, SO_KEEPALIVE, 1, "SO_KEEPALIVE");
-  set_opt(SOL_TCP, TCP_KEEPIDLE, 20, "TCP_KEEPIDLE");    // wait 20s before sending keep-alive packets
-  set_opt(SOL_TCP, TCP_KEEPCNT, 4, "TCP_KEEPCNT");       // 4 keep-alive packets must fail to close
-  set_opt(SOL_TCP, TCP_KEEPINTVL, 15, "TCP_KEEPINTVL");  // send keep-alive packets every 15s
+  set_opt(IPPROTO_TCP, TCP_KEEPIDLE, 20, "TCP_KEEPIDLE");    // wait 20s before sending keep-alive packets
+  set_opt(IPPROTO_TCP, TCP_KEEPCNT, 4, "TCP_KEEPCNT");       // 4 keep-alive packets must fail to close
+  set_opt(IPPROTO_TCP, TCP_KEEPINTVL, 15, "TCP_KEEPINTVL");  // send keep-alive packets every 15s
 }
 
 // Not const because of C-API
 // NOLINTNEXTLINE
 void Socket::SetNoDelay() {
   int optval = 1;
-  MG_ASSERT(!setsockopt(socket_, SOL_TCP, TCP_NODELAY, (void *)&optval, sizeof(optval)), "Can't set socket no delay");
+  MG_ASSERT(!setsockopt(socket_, IPPROTO_TCP, TCP_NODELAY, (void *)&optval, sizeof(optval)), "Can't set socket no delay");
 }
 
 // NOLINTNEXTLINE(readability-make-member-function-const)
@@ -317,8 +323,13 @@ void Socket::SetTimeout(int64_t sec, int64_t usec) {
 
 // NOLINTNEXTLINE(readability-make-member-function-const)
 void Socket::SetUserTimeout(int timeout_ms) {
-  MG_ASSERT(!setsockopt(socket_, SOL_TCP, TCP_USER_TIMEOUT, &timeout_ms, sizeof(timeout_ms)),
+#ifdef TCP_USER_TIMEOUT
+  MG_ASSERT(!setsockopt(socket_, IPPROTO_TCP, TCP_USER_TIMEOUT, &timeout_ms, sizeof(timeout_ms)),
             "Can't set TCP_USER_TIMEOUT");
+#else
+  // TCP_USER_TIMEOUT is Linux-specific; on FreeBSD rely on keep-alive for dead peer detection.
+  (void)timeout_ms;
+#endif
 }
 
 int Socket::ErrorStatus() const {
@@ -356,6 +367,13 @@ std::optional<Socket> Socket::Accept() {
 
   inet_ntop(addr.ss_family, addr_src, addr_decoded, sizeof(addr_decoded));
 
+#ifdef __FreeBSD__
+  {
+    int on = 1;
+    setsockopt(sfd, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
+  }
+#endif
+
   Endpoint const endpoint(addr_decoded, port);
 
   return Socket(sfd, endpoint);
@@ -367,8 +385,15 @@ auto Socket::Write(const uint8_t *data, size_t len, bool have_more, std::optiona
     -> std::expected<void, ClientCommunicationError> {
   // MSG_NOSIGNAL is here to disable raising a SIGPIPE signal when a
   // connection dies mid-write, the socket will only return an EPIPE error.
+#ifdef __FreeBSD__
+  // FreeBSD uses SO_NOSIGPIPE (set on the socket) instead of MSG_NOSIGNAL.
+  // TCP_NOPUSH is the equivalent of MSG_MORE (set via setsockopt).
+  constexpr unsigned msg_nosignal = 0;
+  constexpr unsigned msg_more = 0;
+#else
   constexpr unsigned msg_nosignal = MSG_NOSIGNAL;
   constexpr unsigned msg_more = MSG_MORE;
+#endif
   const unsigned flags = msg_nosignal | (have_more ? msg_more : 0);
   while (len > 0) {
     auto written = send(socket_, data, len, static_cast<int>(flags));

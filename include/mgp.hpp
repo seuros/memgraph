@@ -12,6 +12,7 @@
 #pragma once
 
 #include <chrono>
+#include "utils/chrono_tz_fmt.hpp"
 #include <cstdlib>
 #include <cstring>
 #include <format>
@@ -3990,11 +3991,21 @@ inline bool ZonedDateTime::operator==(const ZonedDateTime &other) const {
 }
 
 inline std::string ZonedDateTime::ToString() const {
+  // Format subseconds manually to guarantee 6 decimal places (microsecond precision).
+  // std::format %S trims trailing zeros on some standard libraries (libc++ 21).
+  auto format_subseconds = [](int64_t timestamp_us) -> std::string {
+    auto total_us = std::abs(timestamp_us);
+    auto secs = static_cast<int>((total_us / 1'000'000) % 60);
+    auto subsec = static_cast<int>(total_us % 1'000'000);
+    return std::format("{:02d}.{:06d}", secs, subsec);
+  };
+
   auto tp = std::chrono::sys_time<std::chrono::microseconds>{std::chrono::microseconds{Timestamp()}};
   if (!std::string_view{Timezone()}.empty()) {
     auto tz_ptr = std::chrono::locate_zone(Timezone());
     auto zt = std::chrono::zoned_time{tz_ptr, tp};
-    return std::format("{0:%Y}-{0:%m}-{0:%d}T{0:%H}:{0:%M}:{0:%S}{0:%Ez}[{1}]", zt, Timezone());
+    auto subsec_str = format_subseconds(Timestamp());
+    return std::format("{0:%Y}-{0:%m}-{0:%d}T{0:%H}:{0:%M}:{1}{0:%Ez}[{2}]", zt, subsec_str, Timezone());
   } else {
     auto local_tp = std::chrono::sys_time<std::chrono::microseconds>{std::chrono::microseconds{Timestamp()} +
                                                                      std::chrono::minutes{Offset()}};
@@ -4002,7 +4013,8 @@ inline std::string ZonedDateTime::ToString() const {
     auto hours = offset_mins / 60;
     auto mins = std::abs(offset_mins % 60);
     auto offset_str = std::format("{:+03d}:{:02d}", hours, mins);
-    return std::format("{0:%Y}-{0:%m}-{0:%d}T{0:%H}:{0:%M}:{0:%S}{1}", local_tp, offset_str);
+    auto subsec_str = format_subseconds(Timestamp() + static_cast<int64_t>(Offset()) * 60'000'000);
+    return std::format("{0:%Y}-{0:%m}-{0:%d}T{0:%H}:{0:%M}:{1}{2}", local_tp, subsec_str, offset_str);
   }
 }
 

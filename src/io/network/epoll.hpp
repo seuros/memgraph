@@ -11,6 +11,11 @@
 
 #pragma once
 
+#ifdef __FreeBSD__
+// FreeBSD: use kqueue-based implementation with epoll-compatible interface
+#include "io/network/kqueue.hpp"
+#else
+
 #include <errno.h>
 #include <fmt/format.h>
 #include <sys/epoll.h>
@@ -117,3 +122,5 @@ class Epoll {
   const int epoll_fd_;
 };
 }  // namespace memgraph::io::network
+
+#endif  // __FreeBSD__

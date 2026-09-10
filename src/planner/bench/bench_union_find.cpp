@@ -9,11 +9,11 @@
 // by the Apache License, Version 2.0, included in the file
 // licenses/APL.txt.
 
-import memgraph.planner.core.union_find;
-
 #include <vector>
 
 #include <benchmark/benchmark.h>
+
+import memgraph.planner.core.union_find;
 
 constexpr auto kRangeLow = 64;
 constexpr auto kRangeHigh = 1024 * 4;

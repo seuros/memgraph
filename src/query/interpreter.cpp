@@ -3269,7 +3269,7 @@ Callback HandleStreamQuery(StreamQuery *stream_query, const Parameters &paramete
         std::vector<std::vector<TypedValue>> results;
         results.reserve(streams_status.size());
         auto stream_info_as_typed_stream_info_emplace_in = [](auto &typed_status, const auto &stream_info) {
-          typed_status.emplace_back(stream_info.batch_interval.count());
+          typed_status.emplace_back(static_cast<int64_t>(stream_info.batch_interval.count()));
           typed_status.emplace_back(stream_info.batch_size);
           typed_status.emplace_back(stream_info.transformation_name);
         };

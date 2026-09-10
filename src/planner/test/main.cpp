@@ -14,7 +14,9 @@
 #define APPROVALS_GOOGLETEST
 #include <ApprovalTests.hpp>
 
+#ifndef __FreeBSD__
 #include <sys/prctl.h>
+#endif
 #include <sys/resource.h>
 
 // Death tests fork() and abort() the child; the kernel then pipes a core dump
@@ -25,7 +27,9 @@
 static auto const disable_core_dumps = [] {
   auto rl = rlimit{.rlim_cur = 0, .rlim_max = 0};
   setrlimit(RLIMIT_CORE, &rl);
+#ifndef __FreeBSD__
   prctl(PR_SET_DUMPABLE, 0, 0, 0, 0);
+#endif
   return 0;
 }();
 

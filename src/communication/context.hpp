@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <expected>
 #include <memory>
+#include "utils/atomic_shared_ptr.hpp"
 #include <optional>
 #include <string>
 #include <string_view>

@@ -18,6 +18,7 @@
 #include <atomic>
 #include <expected>
 #include <memory>
+#include "utils/atomic_shared_ptr.hpp"
 
 namespace memgraph::communication {
 

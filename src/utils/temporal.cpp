@@ -11,6 +11,8 @@
 
 #include "utils/temporal.hpp"
 
+#include "utils/chrono_tz_fmt.hpp"
+
 #include <algorithm>
 #include <charconv>
 #include <chrono>
@@ -564,9 +566,26 @@ int64_t LocalDateTime::SubSecondsAsNanoseconds() const {
 }
 
 // NOTE: Should be removed, but too many tests relly on it
-std::string LocalDateTime::ToString() const { return std::format("{:%Y-%m-%dT%H:%M:%S}", zoned_time()); }
+std::string LocalDateTime::ToString() const {
+  // Avoid %S - libc++ trims trailing fractional zeros while libstdc++ keeps them.
+  auto zt = zoned_time();
+  auto lt = zt.get_local_time();
+  auto dp = std::chrono::floor<std::chrono::days>(lt);
+  auto tod = lt - dp;
+  auto secs = std::chrono::duration_cast<std::chrono::seconds>(tod);
+  auto us = std::chrono::duration_cast<std::chrono::microseconds>(tod - secs);
+  return std::format("{:%Y-%m-%dT%H:%M}:{:0>2}.{:0>6}", zt, secs.count() % 60, us.count());
+}
 
-std::string LocalDateTime::ToStringWTZ() const { return std::format("{:%Y-%m-%dT%H:%M:%S%z}", zoned_time()); }
+std::string LocalDateTime::ToStringWTZ() const {
+  auto zt = zoned_time();
+  auto lt = zt.get_local_time();
+  auto dp = std::chrono::floor<std::chrono::days>(lt);
+  auto tod = lt - dp;
+  auto secs = std::chrono::duration_cast<std::chrono::seconds>(tod);
+  auto us = std::chrono::duration_cast<std::chrono::microseconds>(tod - secs);
+  return std::format("{:%Y-%m-%dT%H:%M}:{:0>2}.{:0>6}{:%z}", zt, secs.count() % 60, us.count(), zt);
+}
 
 Date LocalDateTime::date() const {
   // Date does not support timezones; use calendar time offset
@@ -613,7 +632,8 @@ std::tm LocalDateTime::tm() const {
   const auto info = ztime.get_time_zone()->get_info(us_since_epoch_);
   out.tm_isdst = info.save != 0s;
   out.tm_gmtoff = info.offset.count();
-  out.tm_zone = ztime.get_time_zone()->name().data();
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast) - FreeBSD tm_zone is char*, not const char*
+  out.tm_zone = const_cast<char *>(ztime.get_time_zone()->name().data());
 
   return out;
 }
@@ -928,11 +948,17 @@ std::chrono::nanoseconds ZonedDateTime::SysSubSecondsAsNanoseconds() const {
 }
 
 std::string ZonedDateTime::ToString() const {
+  // Avoid %S - libc++ trims trailing fractional zeros while libstdc++ keeps them.
+  auto lt = zoned_time.get_local_time();
+  auto dp = std::chrono::floor<std::chrono::days>(lt);
+  auto tod = lt - dp;
+  auto secs = std::chrono::duration_cast<std::chrono::seconds>(tod);
+  auto us = std::chrono::duration_cast<std::chrono::microseconds>(tod - secs);
   const auto &timezone = zoned_time.get_time_zone();
   if (timezone.InTzDatabase()) {
-    return std::format("{0:%Y}-{0:%m}-{0:%d}T{0:%H}:{0:%M}:{0:%S}{0:%Ez}[{1}]", zoned_time, timezone.TimezoneName());
+    return std::format("{0:%Y}-{0:%m}-{0:%d}T{0:%H}:{0:%M}:{1:0>2}.{2:0>6}{0:%Ez}[{3}]", zoned_time, secs.count() % 60, us.count(), timezone.TimezoneName());
   }
-  return std::format("{0:%Y}-{0:%m}-{0:%d}T{0:%H}:{0:%M}:{0:%S}{0:%Ez}", zoned_time);
+  return std::format("{0:%Y}-{0:%m}-{0:%d}T{0:%H}:{0:%M}:{1:0>2}.{2:0>6}{0:%Ez}", zoned_time, secs.count() % 60, us.count());
 }
 
 Date ZonedDateTime::AsLocalDate() const {

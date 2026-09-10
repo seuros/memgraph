@@ -38,6 +38,7 @@
 using nuraft::cluster_config;
 using nuraft::ptr;
 using nuraft::snapshot;
+using nuraft::ulong;
 
 namespace memgraph::coordination {
 void from_json(nlohmann::json const &j, SnapshotCtx &snapshot_ctx) {

@@ -143,9 +143,18 @@ class Session final : public std::enable_shared_from_this<Session<TSession, TSes
     return std::visit(
         utils::Overloaded{[shared_this = shared_from_this(), data, len, have_more](TCPSocket &socket) mutable {
                             boost::system::error_code ec;
+#ifdef __FreeBSD__
+                            // FreeBSD has no userspace MSG_MORE equivalent; TCP_NOPUSH via setsockopt
+                            // is the BSD approach but not worth adding here for a hint flag.
+                            (void)have_more;
+#endif
                             while (len > 0) {
                               const auto sent = socket.send(
+#ifdef __FreeBSD__
+                                  boost::asio::buffer(data, len), MSG_NOSIGNAL, ec);
+#else
                                   boost::asio::buffer(data, len), MSG_NOSIGNAL | (have_more ? MSG_MORE : 0U), ec);
+#endif
                               if (ec) {
                                 spdlog::trace("Failed to write to TCP socket: {}", ec.message());
                                 shared_this->OnError(ec);

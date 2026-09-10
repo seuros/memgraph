@@ -13,6 +13,7 @@
 
 #include "utils/memory_layout.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>

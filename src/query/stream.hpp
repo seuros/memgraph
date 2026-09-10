@@ -13,6 +13,7 @@
 
 #include <functional>
 #include <memory>
+#include "utils/move_only_function.hpp"
 #include <vector>
 
 #include "query/typed_value.hpp"

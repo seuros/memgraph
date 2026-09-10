@@ -17,6 +17,13 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# libc++ on FreeBSD 16-CURRENT (clang 21) has a bug where __bit_reference
+# forward-declares __find_bool without the abi_tag attribute, then
+# __algorithm/find.h redefines it with _LIBCPP_HIDE_FROM_ABI which adds one.
+# Clang rejects the mismatch as a hard error, but only when C++20 module
+# scanning is active. The escape hatch drops the attribute entirely.
+add_compile_definitions(_LIBCPP_NO_ABI_TAG)
+
 if (DEFINED ENV{MG_TOOLCHAIN_ROOT})
     set(MG_TOOLCHAIN_ROOT "$ENV{MG_TOOLCHAIN_ROOT}")
 endif()

@@ -13,6 +13,7 @@
 
 #include <cstddef>
 #include <cstdlib>
+#include <memory>
 #include <memory_resource>
 #include <utility>
 
@@ -31,7 +32,7 @@ namespace memgraph::utils {
 /// (default: operator new via std::pmr::get_default_resource()). Callers that
 /// need DB-arena attribution pass an ArenaMemoryResource as the upstream.
 struct PageSlabMemoryResource : std::pmr::memory_resource {
-  static constexpr std::size_t PAGE_SIZE = 4096;
+  static constexpr std::size_t kPageSize = 4096;
 
   explicit PageSlabMemoryResource(std::pmr::memory_resource *upstream = std::pmr::get_default_resource()) noexcept
       : upstream_(upstream) {}
@@ -79,7 +80,7 @@ struct PageSlabMemoryResource : std::pmr::memory_resource {
     // 1. could this fit inside a page slab?
     constexpr auto header_size = sizeof(header);
     auto earliest_slab_position = alignSize(header_size, alignment);
-    auto max_slab_capacity = PAGE_SIZE - earliest_slab_position;
+    auto max_slab_capacity = kPageSize - earliest_slab_position;
     if (max_slab_capacity < bytes) [[unlikely]] {
       auto required_bytes = bytes + earliest_slab_position;
       auto *newmem = reinterpret_cast<header *>(upstream_->allocate(required_bytes, alignment));
@@ -90,10 +91,10 @@ struct PageSlabMemoryResource : std::pmr::memory_resource {
 
     // 2. can it fit in existing slab?
     if (!std::align(alignment, bytes, ptr, space)) [[unlikely]] {
-      auto *newmem = reinterpret_cast<header *>(upstream_->allocate(PAGE_SIZE, PAGE_SIZE));
-      pages = std::construct_at<header>(newmem, pages, PAGE_SIZE, std::align_val_t{PAGE_SIZE});
+      auto *newmem = reinterpret_cast<header *>(upstream_->allocate(kPageSize, kPageSize));
+      pages = std::construct_at<header>(newmem, pages, kPageSize, std::align_val_t{kPageSize});
       ptr = reinterpret_cast<std::byte *>(pages) + header_size;
-      space = PAGE_SIZE - header_size;
+      space = kPageSize - header_size;
       if (!std::align(alignment, bytes, ptr, space)) [[unlikely]] {
         // This should never happen for reasonable alignments
         std::unreachable();

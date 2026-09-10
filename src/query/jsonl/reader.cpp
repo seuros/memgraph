@@ -9,7 +9,9 @@
 // by the Apache License, Version 2.0, included in the file
 // licenses/APL.txt.
 
+#ifndef __FreeBSD__
 module;
+#endif
 
 #include <algorithm>
 #include <cstddef>
@@ -36,9 +38,13 @@ module;
 #include "utils/exceptions.hpp"
 #include "utils/queued_byte_source.hpp"
 
-module memgraph.query.jsonl.reader;
-
+#ifdef __FreeBSD__
 import memgraph.utils.aws;
+#include "query/jsonl/reader.hpp"
+#else
+module memgraph.query.jsonl.reader;
+import memgraph.utils.aws;
+#endif
 
 namespace {
 using memgraph::query::TypedValue;

@@ -11,6 +11,8 @@
 
 #include "utils/fips.hpp"
 
+#include "utils/atomic_shared_ptr.hpp"
+
 #include <atomic>
 #include <utility>
 

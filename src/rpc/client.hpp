@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "utils/atomic_shared_ptr.hpp"
+
 #include <atomic>
 #include <memory>
 #include <mutex>

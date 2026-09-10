@@ -14,6 +14,8 @@
 #include <iterator>
 #include <ranges>
 
+#include "utils/enumerate.hpp"
+
 namespace memgraph::storage {
 
 auto ReplicaFailureReasonToString(ReplicaFailureReason reason) -> std::string {

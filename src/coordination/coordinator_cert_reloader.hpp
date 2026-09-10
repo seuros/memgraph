@@ -23,6 +23,8 @@
 #include <expected>
 #include <filesystem>
 #include <memory>
+
+#include "utils/atomic_shared_ptr.hpp"
 #include <mutex>
 #include <vector>
 

@@ -181,7 +181,7 @@ target_link_libraries(mg-storage-v2
     tantivy_text_search
     usearch
     rollbear::strong_type
-    atomic
+    $<$<NOT:$<PLATFORM_ID:FreeBSD>>:atomic>
     PRIVATE
     ctre::ctre
 )

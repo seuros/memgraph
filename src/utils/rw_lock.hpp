@@ -41,6 +41,7 @@ class RWLock {
 
     MG_ASSERT(pthread_rwlockattr_init(&attr) == 0, "Couldn't initialize utils::RWLock!");
 
+#ifdef __linux__
     switch (priority) {
       case Priority::READ:
         pthread_rwlockattr_setkind_np(&attr, PTHREAD_RWLOCK_PREFER_READER_NP);
@@ -51,7 +52,7 @@ class RWLock {
         //
         // From `man 7 pthread_rwlockattr_setkind_np`:
         // "Setting the value read-write lock kind to
-        // PTHREAD_RWLOCK_PREFER_WRITER_NP results in the same behavior as
+        // PTHREAD_RWLOCK_PREFER_NP results in the same behavior as
         // setting the value to PTHREAD_RWLOCK_PREFER_READER_NP. As long as a
         // reader thread holds the lock, the thread holding a write lock will be
         // starved. Setting the lock kind to
@@ -62,6 +63,11 @@ class RWLock {
         pthread_rwlockattr_setkind_np(&attr, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
         break;
     }
+#else
+    // FreeBSD/POSIX: no _NP kind API.  Default rwlock behaviour is
+    // implementation-defined; FreeBSD defaults to writer-preference.
+    (void)priority;
+#endif
 
     MG_ASSERT(pthread_rwlock_init(&lock_, &attr) == 0, "Couldn't initialize utils::RWLock!");
     pthread_rwlockattr_destroy(&attr);

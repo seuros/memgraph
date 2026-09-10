@@ -119,6 +119,8 @@ struct RWSpinLock {
 
   // TODO: ATM not atomic, just used via atomic_ref, because the type needs to be movable into skip_list
   //       fix the design flaw and then make RWSpinLock a non-copy/non-move type
-  status_t lock_status_ = 0;
+  // mutable: const methods (is_locked) need a non-const atomic_ref for load();
+  // libc++ atomic_ref<const T>::load() has a bug passing const T* to __atomic_load.
+  mutable status_t lock_status_ = 0;
 };
 }  // namespace memgraph::utils

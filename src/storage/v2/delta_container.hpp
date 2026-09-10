@@ -56,7 +56,7 @@ using PageAlignedList = std::forward_list<T, utils::PageAlignedAllocator<T>>;
 // assumption `sizeof(void *)` if for the node pointer inside forward_list's node
 // multiple pages is also fine, unused pages will not add to RSS
 // using 4 pages (16KiB), because that is the smallest of the large size class in jemalloc
-constexpr auto kRemainingPageSpace = (4 * utils::PageAlignedAllocator<Delta>::PAGE_SIZE) - sizeof(void *);
+constexpr auto kRemainingPageSpace = (4 * utils::PageAlignedAllocator<Delta>::kPageSize) - sizeof(void *);
 using delta_slab = memgraph::utils::static_vector<Delta, kRemainingPageSpace>;
 static_assert(alignof(void *) <= alignof(delta_slab), "assumption that above calculation is without any padding");
 static_assert(292 == delta_slab::capacity(),

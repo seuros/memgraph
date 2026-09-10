@@ -12,6 +12,7 @@
 
 #include <atomic>
 #include <chrono>
+#include "utils/chrono_tz_compat.hpp"
 
 namespace memgraph::utils {
 
