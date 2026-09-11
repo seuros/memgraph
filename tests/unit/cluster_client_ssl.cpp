@@ -103,10 +103,17 @@ constexpr uint16_t kPort{8199};
   // The CN on the same line as `depth=0`.
   auto const eol = output.find('\n', depth_pos);
   auto const line = output.substr(depth_pos, eol == std::string_view::npos ? std::string_view::npos : eol - depth_pos);
-  constexpr std::string_view kCnMarker{"CN = "};
-  auto const cn_pos = line.find(kCnMarker);
-  if (cn_pos == std::string_view::npos) return std::nullopt;
-  auto cn = line.substr(cn_pos + kCnMarker.size());
+  // OpenSSL output format varies: "CN = value" (older) or "CN=value" (newer/FreeBSD).
+  constexpr std::string_view kCnMarkerSpaced{"CN = "};
+  constexpr std::string_view kCnMarkerCompact{"CN="};
+  std::string_view cn;
+  if (auto pos = line.find(kCnMarkerSpaced); pos != std::string_view::npos) {
+    cn = line.substr(pos + kCnMarkerSpaced.size());
+  } else if (auto pos2 = line.find(kCnMarkerCompact); pos2 != std::string_view::npos) {
+    cn = line.substr(pos2 + kCnMarkerCompact.size());
+  } else {
+    return std::nullopt;
+  }
   // Strip trailing whitespace / comma in case the subject has more fields.
   auto const end = cn.find_first_of(", \r\n");
   if (end != std::string_view::npos) cn = cn.substr(0, end);

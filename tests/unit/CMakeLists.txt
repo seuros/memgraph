@@ -11,7 +11,10 @@ if(NOT TARGET memgraph__unit)
 endif()
 
 add_library(memgraph_unit_main OBJECT main.cpp)
-target_link_libraries(memgraph_unit_main mg-memory mg-utils GTest::gtest GTest::gmock Threads::Threads dl atomic)
+target_link_libraries(memgraph_unit_main mg-memory mg-utils GTest::gtest GTest::gmock Threads::Threads)
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+  target_link_libraries(memgraph_unit_main dl atomic)
+endif()
 target_precompile_headers(memgraph_unit_main PRIVATE
     <gtest/gtest.h>
 )

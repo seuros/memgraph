@@ -49,11 +49,15 @@ inline std::optional<double> ResidentFraction(const std::filesystem::path &path)
 
   const auto page = static_cast<size_t>(::sysconf(_SC_PAGESIZE));
   const auto pages = (size + page - 1) / page;
+#ifdef __FreeBSD__
+  std::vector<char> resident(pages, 0);
+#else
   std::vector<unsigned char> resident(pages, 0);
+#endif
   if (::mincore(addr, size, resident.data()) == -1) return std::nullopt;
 
   // The low bit is the "in core" flag; the rest are unspecified.
-  const auto in_core = std::ranges::count_if(resident, [](unsigned char v) { return (v & 1U) != 0; });
+  const auto in_core = std::ranges::count_if(resident, [](auto v) { return (static_cast<unsigned char>(v) & 1U) != 0; });
   return static_cast<double>(in_core) / static_cast<double>(pages);
 }
 

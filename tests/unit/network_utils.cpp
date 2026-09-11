@@ -11,9 +11,26 @@
 
 #include "gtest/gtest.h"
 
+#include <netdb.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 #include "io/network/utils.hpp"
 
 using namespace memgraph::io::network;
+
+namespace {
+bool HasIPv6() {
+  struct addrinfo hints{};
+  hints.ai_family = AF_INET6;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = AI_NUMERICHOST;
+  struct addrinfo *res = nullptr;
+  int ret = getaddrinfo("::1", nullptr, &hints, &res);
+  if (res) freeaddrinfo(res);
+  return ret == 0;
+}
+}  // namespace
 
 TEST(ResolveHostname, Simple) {
   auto result = ResolveHostname("localhost");
@@ -26,6 +43,9 @@ TEST(ResolveHostname, PassThroughIpv4) {
 }
 
 TEST(ResolveHostname, PassThroughIpv6) {
+  if (!HasIPv6()) {
+    GTEST_SKIP() << "IPv6 not available on this system";
+  }
   auto result = ResolveHostname("::1");
   EXPECT_EQ(result, "::1");
 }

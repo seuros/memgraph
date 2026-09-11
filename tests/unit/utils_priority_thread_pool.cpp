@@ -46,14 +46,14 @@ TEST(PriorityThreadPool, Basic2) {
   memgraph::utils::PriorityThreadPool pool{1, 1};
 
   // Figure out which thread is the low/high
-  std::atomic<std::thread::id> low_th = std::thread::id{0};
+  std::atomic<std::thread::id> low_th = std::thread::id{};
   pool.ScheduledAddTask(
       [&](auto) {
         low_th = std::this_thread::get_id();
         low_th.notify_one();
       },
       utils::Priority::LOW);
-  low_th.wait(std::thread::id{0});
+  low_th.wait(std::thread::id{});
 
   utils::Synchronized<std::vector<int>> low_out;
   utils::Synchronized<std::vector<int>> high_out;

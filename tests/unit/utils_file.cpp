@@ -1337,6 +1337,9 @@ TEST_F(FileCacheHintTest, DroppingCachedPagesEvictsAnUnpacedFile) {
 //
 // The fatal branch, EIO and ENOSPC, needs an injected device failure and is not covered here.
 TEST_F(FileCacheHintTest, PacingDisablesItselfOnADescriptorItCannotPace) {
+#ifdef __FreeBSD__
+  GTEST_SKIP() << "sync_file_range is Linux-specific; FreeBSD fdatasync does not fail on /dev/null";
+#endif
   PacedFile file;
   ASSERT_TRUE(file.Open("/dev/null", PacedFile::Mode::APPEND_TO_EXISTING));
   file.EnableWritebackPacing(kWindow);

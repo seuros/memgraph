@@ -22,8 +22,8 @@
 #include <gtest/gtest.h>
 
 #include "query/typed_value.hpp"
-
-import memgraph.query.jsonl.reader;
+import memgraph.utils.aws;
+#include "query/jsonl/reader.hpp"
 
 namespace fs = std::filesystem;
 

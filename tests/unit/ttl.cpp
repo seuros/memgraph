@@ -329,9 +329,9 @@ TYPED_TEST(TTLFixture, Periodic) {
   auto ttl_prop = this->db_->storage()->NameToProperty("ttl");
   auto now = std::chrono::system_clock::now();
   auto older = now - std::chrono::seconds(10);
-  auto older_ts = std::chrono::duration_cast<std::chrono::microseconds>(older.time_since_epoch()).count();
+  auto older_ts = static_cast<int64_t>(std::chrono::duration_cast<std::chrono::microseconds>(older.time_since_epoch()).count());
   auto newer = now + std::chrono::seconds(3);
-  auto newer_ts = std::chrono::duration_cast<std::chrono::microseconds>(newer.time_since_epoch()).count();
+  auto newer_ts = static_cast<int64_t>(std::chrono::duration_cast<std::chrono::microseconds>(newer.time_since_epoch()).count());
   {
     auto acc = this->db_->Access(memgraph::storage::WRITE);
     [[maybe_unused]] auto v1 = acc->CreateVertex();  // No label no property
@@ -383,9 +383,9 @@ TYPED_TEST(TTLFixture, StartTime) {
   auto ttl_prop = this->db_->storage()->NameToProperty("ttl");
   auto now = std::chrono::system_clock::now();
   auto older = now - std::chrono::seconds(10);
-  auto older_ts = std::chrono::duration_cast<std::chrono::microseconds>(older.time_since_epoch()).count();
+  auto older_ts = static_cast<int64_t>(std::chrono::duration_cast<std::chrono::microseconds>(older.time_since_epoch()).count());
   auto newer = now + std::chrono::seconds(4);
-  auto newer_ts = std::chrono::duration_cast<std::chrono::microseconds>(newer.time_since_epoch()).count();
+  auto newer_ts = static_cast<int64_t>(std::chrono::duration_cast<std::chrono::microseconds>(newer.time_since_epoch()).count());
   {
     auto acc = this->db_->Access(memgraph::storage::WRITE);
     [[maybe_unused]] auto v1 = acc->CreateVertex();  // No label no property
@@ -444,9 +444,9 @@ TYPED_TEST(TTLFixture, Edge) {
   auto et2 = this->db_->storage()->NameToEdgeType("t2");
   auto now = std::chrono::system_clock::now();
   auto older = now - std::chrono::seconds(10);
-  auto older_ts = std::chrono::duration_cast<std::chrono::microseconds>(older.time_since_epoch()).count();
+  auto older_ts = static_cast<int64_t>(std::chrono::duration_cast<std::chrono::microseconds>(older.time_since_epoch()).count());
   auto newer = now + std::chrono::seconds(3);
-  auto newer_ts = std::chrono::duration_cast<std::chrono::microseconds>(newer.time_since_epoch()).count();
+  auto newer_ts = static_cast<int64_t>(std::chrono::duration_cast<std::chrono::microseconds>(newer.time_since_epoch()).count());
   {
     auto acc = this->db_->Access(memgraph::storage::WRITE);
     [[maybe_unused]] auto v1 = acc->CreateVertex();  // No label no property
@@ -524,8 +524,9 @@ TEST(TtlInfo, PersistentTimezone) {
   {
     memgraph::utils::Settings settings(GetDataDirectory());
     memgraph::flags::run_time::Initialize(settings);
-    // Default value
-    EXPECT_EQ(memgraph::flags::run_time::GetTimezone()->name(), "Etc/UTC");
+    // Default value - locate_zone("UTC") may resolve to "UTC" or "Etc/UTC"
+    // depending on the C++ standard library implementation.
+    EXPECT_EQ(memgraph::flags::run_time::GetTimezone()->name(), std::chrono::locate_zone("UTC")->name());
     // New value
     settings.SetValue("timezone", "Europe/Rome");
     EXPECT_EQ(memgraph::flags::run_time::GetTimezone()->name(), "Europe/Rome");
@@ -633,9 +634,9 @@ TEST(TTLUserCheckTest, UserCheckFunctionality) {
   // Create test vertices with TTL properties
   auto now = std::chrono::system_clock::now();
   auto older = now - std::chrono::seconds(10);
-  auto older_ts = std::chrono::duration_cast<std::chrono::microseconds>(older.time_since_epoch()).count();
+  auto older_ts = static_cast<int64_t>(std::chrono::duration_cast<std::chrono::microseconds>(older.time_since_epoch()).count());
   auto newer = now + std::chrono::seconds(5);
-  auto newer_ts = std::chrono::duration_cast<std::chrono::microseconds>(newer.time_since_epoch()).count();
+  auto newer_ts = static_cast<int64_t>(std::chrono::duration_cast<std::chrono::microseconds>(newer.time_since_epoch()).count());
 
   // Create vertices: 2 with TTL label and older timestamp (should be deleted), 1 with newer timestamp (should stay)
   {

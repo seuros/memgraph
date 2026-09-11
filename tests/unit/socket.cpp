@@ -10,6 +10,7 @@
 // licenses/APL.txt.
 
 #include <csignal>
+#include <sys/socket.h>
 #include <thread>
 
 #include <gtest/gtest.h>
@@ -51,6 +52,12 @@ TEST(Socket, WaitForReadyRead) {
 }
 
 TEST(Socket, WaitForReadyWrite) {
+#ifdef __FreeBSD__
+  // FreeBSD enforces a minimum SO_SNDBUF much larger than 1024, making this
+  // test's strategy of filling the write buffer with a small amount of data
+  // infeasible within a reasonable timeout.
+  GTEST_SKIP() << "SO_SNDBUF minimum too large on FreeBSD for this test strategy";
+#endif
   memgraph::io::network::Socket server;
   ASSERT_TRUE(server.Bind({"127.0.0.1", 0}));
   ASSERT_TRUE(server.Listen(1024));

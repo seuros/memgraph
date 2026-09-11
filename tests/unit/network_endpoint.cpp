@@ -11,10 +11,27 @@
 
 #include "gtest/gtest.h"
 
+#include <netdb.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 #include "io/network/endpoint.hpp"
 #include "io/network/network_error.hpp"
 
 using endpoint_t = memgraph::io::network::Endpoint;
+
+namespace {
+bool HasIPv6() {
+  struct addrinfo hints{};
+  hints.ai_family = AF_INET6;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = AI_NUMERICHOST;
+  struct addrinfo *res = nullptr;
+  int ret = getaddrinfo("::1", nullptr, &hints, &res);
+  if (res) freeaddrinfo(res);
+  return ret == 0;
+}
+}  // namespace
 
 TEST(Endpoint, IPv4) {
   endpoint_t endpoint;
@@ -27,6 +44,9 @@ TEST(Endpoint, IPv4) {
 }
 
 TEST(Endpoint, IPv6) {
+  if (!HasIPv6()) {
+    GTEST_SKIP() << "IPv6 not available on this system";
+  }
   endpoint_t endpoint;
 
   // test constructor

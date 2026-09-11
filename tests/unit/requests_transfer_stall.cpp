@@ -56,14 +56,14 @@ class OneShotServer {
 
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = ::htonl(INADDR_LOOPBACK);
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     addr.sin_port = 0;
     MG_ASSERT(::bind(listen_fd_, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) == 0, "could not bind");
     MG_ASSERT(::listen(listen_fd_, 1) == 0, "could not listen");
 
     socklen_t len = sizeof(addr);
     MG_ASSERT(::getsockname(listen_fd_, reinterpret_cast<sockaddr *>(&addr), &len) == 0, "could not read the port");
-    port_ = ::ntohs(addr.sin_port);
+    port_ = ntohs(addr.sin_port);
 
     thread_ = std::thread{[this] { Serve(); }};
   }

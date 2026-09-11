@@ -76,7 +76,10 @@ class MonitoringServerTest : public ::testing::Test {
 
   std::string ServerAddress() const {
     const auto ep = monitoring_server.GetEndpoint();
-    return ep ? monitoring_server.GetEndpoint()->address().to_string() : "";
+    if (!ep) return "";
+    auto addr = ep->address().to_string();
+    // On FreeBSD, connecting to 0.0.0.0 is not allowed; use loopback instead.
+    return addr == "0.0.0.0" ? "127.0.0.1" : addr;
   }
 
   void StartLogging(std::vector<std::pair<spdlog::level::level_enum, std::string>> messages) {
@@ -179,7 +182,7 @@ TEST(MonitoringServer, Connection) {
     Client client;
     const auto ep = monitoring_server.GetEndpoint();
     ASSERT_TRUE(ep);
-    EXPECT_NO_THROW(client.Connect("0.0.0.0", std::to_string(ep->port())));
+    EXPECT_NO_THROW(client.Connect("127.0.0.1", std::to_string(ep->port())));
   }
 
   ASSERT_NO_THROW(monitoring_server.Shutdown());

@@ -144,7 +144,7 @@ TEST(ReplicationServer, NoTlsConnection) {
 
   // Configured without TLS
   ClientContext client_conntext;
-  Client client(Endpoint("0.0.0.0", port), &client_conntext);
+  Client client(Endpoint("127.0.0.1", port), &client_conntext);
   auto stream = client.Stream<FrequentHeartbeatRpc>();
   EXPECT_NO_THROW(stream.SendAndWait());
 }
@@ -161,7 +161,7 @@ TEST(ReplicationServer, TlsClientToNoTlsServer) {
   auto const ca_file = (certs_dir / "ca.crt").string();
   ClientContext client_conntext(key_file, cert_file, ca_file);
   auto const rpc_timeouts = std::unordered_map{std::make_pair("FrequentHeartbeatReq"sv, 500)};
-  Client client(Endpoint("0.0.0.0", port), &client_conntext, rpc_timeouts, std::chrono::milliseconds{500});
+  Client client(Endpoint("127.0.0.1", port), &client_conntext, rpc_timeouts, std::chrono::milliseconds{500});
   // Fails after 5s because the timeout is 5s on socket connect
   EXPECT_THROW(client.Stream<FrequentHeartbeatRpc>(), RpcFailedToConnectException);
 }
@@ -183,7 +183,7 @@ TEST(ReplicationServer, TlsClientTlsServer) {
   auto const cert1_file = (certs_dir / "instance1.crt").string();
   ClientContext client_conntext(key1_file, cert1_file, ca_file);
   auto const rpc_timeouts = std::unordered_map{std::make_pair("FrequentHeartbeatReq"sv, 500)};
-  Client client(Endpoint("0.0.0.0", port), &client_conntext, rpc_timeouts);
+  Client client(Endpoint("127.0.0.1", port), &client_conntext, rpc_timeouts);
   auto stream = client.Stream<FrequentHeartbeatRpc>();
   EXPECT_NO_THROW(stream.SendAndWait());
 }
@@ -202,7 +202,7 @@ TEST(ReplicationServer, TlsServerNoTlsClient) {
   // Configure TLS client
   // Configured without TLS
   ClientContext client_conntext;
-  Client client(Endpoint("0.0.0.0", port), &client_conntext);
+  Client client(Endpoint("127.0.0.1", port), &client_conntext);
   auto stream = client.Stream<FrequentHeartbeatRpc>();
   EXPECT_THROW(stream.SendAndWait(), RpcFailedException);
 }
@@ -259,7 +259,7 @@ TEST(ReplicationServer, TlsReload) {
   ClientContext client_conntext(key1_file, cert1_file, ca_file);
   auto const rpc_timeouts = std::unordered_map{std::make_pair("FrequentHeartbeatReq"sv, 500)};
   {
-    Client client(Endpoint("0.0.0.0", port), &client_conntext, rpc_timeouts);
+    Client client(Endpoint("127.0.0.1", port), &client_conntext, rpc_timeouts);
     EXPECT_NO_THROW(client.Stream<FrequentHeartbeatRpc>().SendAndWait());
   }
 
@@ -282,7 +282,7 @@ TEST(ReplicationServer, TlsReload) {
 
   // Sanity: a fresh RPC round-trip after reload also works.
   {
-    Client client(Endpoint("0.0.0.0", port), &client_conntext, rpc_timeouts);
+    Client client(Endpoint("127.0.0.1", port), &client_conntext, rpc_timeouts);
     EXPECT_NO_THROW(client.Stream<FrequentHeartbeatRpc>().SendAndWait());
   }
 

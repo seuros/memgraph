@@ -574,7 +574,7 @@ TEST(TemporalTest, ZonedDateTimeParsing) {
       std::make_pair("-08"sv, Timezone(std::chrono::minutes{-480})),
       std::make_pair("-08[America/Los_Angeles]"sv, Timezone("America/Los_Angeles")),
       std::make_pair("[Europe/Zagreb]"sv, Timezone("Europe/Zagreb")),
-      std::make_pair("[US/Pacific]"sv, Timezone("America/Los_Angeles")),  // US/Pacific links to America/Los_Angeles
+      std::make_pair("[US/Pacific]"sv, Timezone(std::chrono::locate_zone("US/Pacific"))),  // may or may not resolve link
       std::make_pair("[GMT]"sv, Timezone("GMT")),
   };
 
@@ -828,19 +828,24 @@ TEST(TemporalTest, PrintLocalDateTimeTZ) {
 TEST(TemporalTest, PrintZonedDateTime) {
   using namespace memgraph::utils;
 
+  // The resolved name of US/Pacific depends on the C++ standard library and tzdata version:
+  // libstdc++ with older tzdata resolves it to "America/Los_Angeles"; our polyfill preserves the name.
+  const auto us_pacific_name = std::string{std::chrono::locate_zone("US/Pacific")->name()};
+  const auto us_pacific_expected = std::format("2024-07-01T13:02:40.100050-07:00[{}]", us_pacific_name);
+
   const std::array cases{
       // Standard time
       std::make_pair(ZonedDateTime({{2024, 1, 1}, {13, 2, 40, 100, 50}, Timezone("Europe/Zagreb")}),
-                     "2024-01-01T13:02:40.100050+01:00[Europe/Zagreb]"),
+                     std::string{"2024-01-01T13:02:40.100050+01:00[Europe/Zagreb]"}),
       // Daylight saving time
       std::make_pair(ZonedDateTime({{2024, 7, 1}, {13, 2, 40, 100, 50}, Timezone("Europe/Zagreb")}),
-                     "2024-07-01T13:02:40.100050+02:00[Europe/Zagreb]"),
+                     std::string{"2024-07-01T13:02:40.100050+02:00[Europe/Zagreb]"}),
       // Timezone links to another
       std::make_pair(ZonedDateTime({{2024, 7, 1}, {13, 2, 40, 100, 50}, Timezone("US/Pacific")}),
-                     "2024-07-01T13:02:40.100050-07:00[America/Los_Angeles]"),
+                     us_pacific_expected),
       // Timezone from offset (no name specified)
       std::make_pair(ZonedDateTime({{2024, 1, 1}, {13, 2, 40, 100, 50}, Timezone(std::chrono::minutes{60})}),
-                     "2024-01-01T13:02:40.100050+01:00"),
+                     std::string{"2024-01-01T13:02:40.100050+01:00"}),
   };
 
   auto check_to_string = [](const auto &cases) {
@@ -1170,19 +1175,22 @@ TEST(TemporalTest, LocalDateTimeConvertsToStringTZ) {
 TEST(TemporalTest, ZonedDateTimeConvertsToString) {
   using namespace memgraph::utils;
 
+  const auto us_pacific_name = std::string{std::chrono::locate_zone("US/Pacific")->name()};
+  const auto us_pacific_expected = std::format("2024-07-01T13:02:40.100050-07:00[{}]", us_pacific_name);
+
   const std::array cases{
       // Standard time
       std::make_pair(ZonedDateTime({{2024, 1, 1}, {13, 2, 40, 100, 50}, Timezone("Europe/Zagreb")}),
-                     "2024-01-01T13:02:40.100050+01:00[Europe/Zagreb]"),
+                     std::string{"2024-01-01T13:02:40.100050+01:00[Europe/Zagreb]"}),
       // Daylight saving time
       std::make_pair(ZonedDateTime({{2024, 7, 1}, {13, 2, 40, 100, 50}, Timezone("Europe/Zagreb")}),
-                     "2024-07-01T13:02:40.100050+02:00[Europe/Zagreb]"),
+                     std::string{"2024-07-01T13:02:40.100050+02:00[Europe/Zagreb]"}),
       // Timezone links to another
       std::make_pair(ZonedDateTime({{2024, 7, 1}, {13, 2, 40, 100, 50}, Timezone("US/Pacific")}),
-                     "2024-07-01T13:02:40.100050-07:00[America/Los_Angeles]"),
+                     us_pacific_expected),
       // Timezone from offset (no name specified)
       std::make_pair(ZonedDateTime({{2024, 1, 1}, {13, 2, 40, 100, 50}, Timezone(std::chrono::minutes{60})}),
-                     "2024-01-01T13:02:40.100050+01:00"),
+                     std::string{"2024-01-01T13:02:40.100050+01:00"}),
   };
 
   auto check_to_string = [](const auto &cases) {

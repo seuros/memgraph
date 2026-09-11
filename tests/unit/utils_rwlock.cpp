@@ -100,6 +100,11 @@ TEST(RWLock, ReadPriority) {
    * With read priority a shared lock is still granted while a writer waits for the exclusive one,
    * so a succession of readers keeps the writer out for as long as it lasts.
    */
+#ifdef __FreeBSD__
+  // FreeBSD pthread_rwlock has no reader-preference API (no _NP kind attrs).
+  // The default is writer-preference, so this test's assumption does not hold.
+  GTEST_SKIP() << "FreeBSD rwlock defaults to writer-preference; reader-preference not available";
+#endif
   memgraph::utils::RWLock rwlock(memgraph::utils::RWLock::Priority::READ);
 
   // Held across every one of the reader's acquisitions below, so the number of readers never falls
